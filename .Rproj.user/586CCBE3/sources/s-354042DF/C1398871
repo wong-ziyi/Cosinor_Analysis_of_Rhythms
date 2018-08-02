@@ -1,0 +1,23 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1533139811023.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "C1398871",
+    "lastKnownWriteTime" : 1533169729,
+    "last_content_update" : 1533169729399,
+    "path" : "~/GitHub/Cosinor_Analysis_of_Rhythms/Script.R",
+    "project_path" : "Script.R",
+    "properties" : {
+        "cursorPosition" : "39,0",
+        "scrollLine" : "16",
+        "tempName" : "Untitled1"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
