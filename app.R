@@ -99,6 +99,8 @@ server<-function(input, output, session) {
       ForScatter<-res()[4][[1]]
       FitCurve<-res()[3][[1]]
       temp<-res()[2][[1]]
+      xtitle<-input$xtitle
+      ytitle<-input$ytitle
       if (input$style == TRUE){
         gp <- ggplot()+
           geom_point(aes(x=Time, y=value), ForScatter)+
