@@ -1,18 +1,18 @@
 #parameters setting
-period=23.5
+period=24
 TimeTagsCol=1
 ValueCol=c(2:4)
 xtitle="Time(h)"
 ytitle="Expression Level"
 
 #input the raw data
-raw<-read.csv("results.csv")
+raw<-read.csv("www/Example/results2.csv")
 #processes raw data (mean SD calculation)
 temp<-data.frame(Time=raw[, TimeTagsCol], Value=rowMeans(raw[, ValueCol]), SD=rowSds(as.matrix(raw[, ValueCol])))
 #fit raw data to cosinor curve
 fit_per_est<-cosinor.lm(Value~time(Time), period = period, data = temp)
 #get fitted model
-FitCurve<-data.frame(x=temp$Time, y=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*temp$Time/period+2*fit_per_est$coefficients[3]))
+FitCurve<-data.frame(x=temp$Time, y=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*temp$Time/period+pi-fit_per_est$coefficients[3]))
 FitCurve<-data.frame(x=temp$Time, y=fit_per_est$fit$fitted.values)
 #rhythm detection
 res<-cosinor.detect(fit_per_est)

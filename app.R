@@ -16,8 +16,10 @@ library(ape)
 library(DT)
 library(shinyjs)
 library(cosinor2)
+source("functions.R")
 ###=== end of packages and functions loading ===###
 ui<-fluidPage(
+  useShinyjs(),
   sidebarLayout(
     sidebarPanel(
       conditionalPanel(
@@ -26,14 +28,20 @@ ui<-fluidPage(
         verticalLayout(
           fileInput(
             'raw',
-            label = "Upload your raw data in .csv file",
+            label = h4(popover(title = "?", 
+                               content = a("Please click here to see an example",
+                                           href="./Example/results.csv",
+                                           download="results.csv",
+                                           target="_blank"), 
+                               trigger = "focus", html = TRUE),
+                       "Upload your wave signal in .csv file:"),
             accept = c('csv', 'comma-separated-values', '.csv')
           ),
           checkboxInput('style', 'Scatter plot'),
           numericInput('TimeTagsCol', 'Cloumn number of time', 1),
           numericInput('ValueCols', 'Start cloumn number of sample', 2),
           numericInput('ValueCole', 'End Cloumn number of sample', 4),
-          numericInput('period', 'Period assumption', 23.5),
+          numericInput('period', 'Period assumption', 24),
           textInput('xtitle', 'Label of x-axis', "Time(h)"),
           textInput('ytitle', 'Label of y-axis', "Expression Level"),
           actionButton("OK", "OK", class="btn-primary")
@@ -51,11 +59,11 @@ ui<-fluidPage(
           "Cosinor Analysis of Rhythms",
           verticalLayout(
             plotOutput("plot.out"),
-            verbatimTextOutput("F.statistic"),
-            verbatimTextOutput("rhythm.p"),
-            verbatimTextOutput("CurveFun"),
-            verbatimTextOutput("R2"),
-            verbatimTextOutput("P.value")
+            textOutput("F.statistic"),
+            textOutput("rhythm.p"),
+            htmlOutput("CurveFun"),
+            textOutput("R2"),
+            textOutput("P.value")
           )
         ),
         tabPanel(
@@ -82,8 +90,8 @@ server<-function(input, output, session) {
     ForScatter<-melt(raw, id.vars=TimeTagsCol)
     #Results Part
     CurveFun<-paste0(round(fit_per_est$coefficients[1],2),
-                     " + ", round(fit_per_est$coefficients[2],2), 
-                     " x cos(2\u03C0t/\u03C4 + ", round(fit_per_est$coefficients[3],2),
+                     " + ", round(fit_per_est$coefficients[2],2),
+                     "cos(2\u03C0t/", period, " + ", round(pi-fit_per_est$coefficients[3],2),
                      ")")
     F.statistic<-res[1]
     rhythm.p<-res[4]
@@ -123,10 +131,11 @@ server<-function(input, output, session) {
     }
   })
   output$plot.out<-renderPlot(plot.out())
-  output$F.statistic<-renderPrint(paste0("F statitics: ", res()[6]))
-  output$rhythm.p<-renderPrint(paste0("P-value for rhythms: ", res()[7]))
-  output$CurveFun<-renderPrint(paste0("Function of fitted curve: ", res()[5]))
-  output$R2<-renderPrint(paste0("R squared (Goodness of fit): ", res()[8]))
-  output$P.value<-renderPrint(paste0("P-value of fit: ", res()[9]))
+  output$F.statistic<-renderText(paste0("F statitics: ", res()[6]))
+  output$rhythm.p<-renderText(paste0("P-value for rhythms: ", res()[7]))
+  output$CurveFun<-renderUI(HTML(paste0("Function of fitted curve: ", res()[5])))
+  output$R2<-renderText(paste0("R squared (Goodness of fit): ", res()[8]))
+  output$P.value<-renderText(paste0("P-value of fit: ", res()[9]))
+  session$onSessionEnded(stopApp)
 }
 shinyApp(ui=ui, server=server)
