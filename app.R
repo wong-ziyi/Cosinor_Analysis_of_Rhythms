@@ -84,10 +84,10 @@ server<-function(input, output, session) {
     ValueCol<-c(input$ValueCols:input$ValueCole)
     temp<-data.frame(Time=raw[, TimeTagsCol], Value=rowMeans(raw[, ValueCol]), SD=rowSds(as.matrix(raw[, ValueCol])))
     fit_per_est<-cosinor.lm(Value~time(Time), period = period, data = temp)
-    FitCurve<-data.frame(x=temp$Time, y=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*temp$Time/period+2*fit_per_est$coefficients[3]))
-    FitCurve<-data.frame(x=temp$Time, y=fit_per_est$fit$fitted.values)
+    FitCurve<-data.frame(x=temp$Time, y=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*temp$Time/period+pi-fit_per_est$coefficients[3]))
     res<-cosinor.detect(fit_per_est)
     ForScatter<-melt(raw, id.vars=TimeTagsCol)
+    ForScatter<-cbind(ForScatter, test=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*ForScatter$Time/period+pi-fit_per_est$coefficients[3]))
     #Results Part
     CurveFun<-paste0(round(fit_per_est$coefficients[1],2),
                      " + ", round(fit_per_est$coefficients[2],2),
@@ -95,8 +95,8 @@ server<-function(input, output, session) {
                      ")")
     F.statistic<-res[1]
     rhythm.p<-res[4]
-    R2<-cor(temp$Value, FitCurve$y)^2
-    P.value<-cor.test(temp$Value, FitCurve$y)$p.value
+    R2<-cor(ForScatter$value, ForScatter$test)^2
+    P.value<-cor.test(ForScatter$value, ForScatter$test)$p.value
     res<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value)
     return(res)
   })

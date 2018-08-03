@@ -18,6 +18,7 @@ FitCurve<-data.frame(x=temp$Time, y=fit_per_est$fit$fitted.values)
 res<-cosinor.detect(fit_per_est)
 #Scatter plot
 ForScatter<-melt(raw, id.vars=TimeTagsCol)
+
 ggplot()+
   geom_point(aes(x=Time, y=value), ForScatter)+
   geom_line(aes(x=x, y=y, colour="red"), FitCurve)+
