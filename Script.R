@@ -38,3 +38,5 @@ ggplot()+
 
 cor(temp$Value, FitCurve$y)^2 #R^2
 cor.test(temp$Value, FitCurve$y) #P-value
+
+scale_x_discrete(labels=ticks[position:length(temp$Time)])

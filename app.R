@@ -41,7 +41,8 @@ ui<-fluidPage(
           numericInput('TimeTagsCol', 'Cloumn number of time', 1),
           numericInput('ValueCols', 'Start cloumn number of sample', 2),
           numericInput('ValueCole', 'End Cloumn number of sample', 4),
-          numericInput('period', 'Period assumption', 24),
+          numericInput('Interval', 'Interval of Data', 0.5),
+          numericInput('XInterval', 'X-axis Display Interval', 4),
           textInput('xtitle', 'Label of x-axis', "Time(h)"),
           textInput('ytitle', 'Label of y-axis', "Expression Level"),
           actionButton("OK", "OK", class="btn-primary")
@@ -81,7 +82,17 @@ server<-function(input, output, session) {
     period<-input$period
     xtitle<-input$xtitle
     ytitle<-input$ytitle
+    if(input$Interval != 0){
+      TimeSeq<-seq(from=0, to=24, by=input$Interval)
+      TimeSeq<-TimeSeq[-length(TimeSeq)]
+    } else {
+      TimeSeq<-(0:23)
+    }
+    position<-match(raw[1, TimeTagsCol], TimeSeq)
+    ticks<-rep(TimeSeq, ceil(length(raw[, TimeTagsCol])/24))
     ValueCol<-c(input$ValueCols:input$ValueCole)
+    period<-periodogram(data = raw, timecol = input$TimeTagsCol, firstsubj = input$ValueCols, lastsubj = input$ValueCole)
+    period<-period$plot_env$best
     temp<-data.frame(Time=raw[, TimeTagsCol], Value=rowMeans(raw[, ValueCol]), SD=rowSds(as.matrix(raw[, ValueCol])))
     fit_per_est<-cosinor.lm(Value~time(Time), period = period, data = temp)
     FitCurve<-data.frame(x=temp$Time, y=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*temp$Time/period+pi-fit_per_est$coefficients[3]))
@@ -97,13 +108,15 @@ server<-function(input, output, session) {
     rhythm.p<-res[4]
     R2<-cor(ForScatter$value, ForScatter$test)^2
     P.value<-cor.test(ForScatter$value, ForScatter$test)$p.value
-    res<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value)
+    res<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value, position, ticks)
     return(res)
   })
   plot.out<-reactive({
     if (is.null(res())){
       return(NULL)
     } else {
+      position<-res()[10][[1]]
+      ticks<-res()[11][[1]]
       ForScatter<-res()[4][[1]]
       FitCurve<-res()[3][[1]]
       temp<-res()[2][[1]]
@@ -116,7 +129,8 @@ server<-function(input, output, session) {
           theme_classic()+
           theme(legend.position = "none")+
           labs(x=xtitle, y=ytitle)+
-          expand_limits(y = 0)
+          expand_limits(y = 0)+
+          scale_x_continuous(breaks = c(temp$Time)[seq(from=1, to=length(temp$Time), by=input$XInterval)], labels=ticks[position:(length(temp$Time)-1+position)][seq(from=1, to=length(temp$Time), by=input$XInterval)])
       } else if (input$style == FALSE){
         gp <- ggplot()+
           geom_point(aes(x=Time, y=Value), temp)+
@@ -125,7 +139,8 @@ server<-function(input, output, session) {
           theme_classic()+
           theme(legend.position = "none")+
           labs(x=xtitle, y=ytitle)+
-          expand_limits(y = 0)
+          expand_limits(y = 0)+
+          scale_x_continuous(breaks = c(temp$Time)[seq(from=1, to=length(temp$Time), by=input$XInterval)], labels=ticks[position:(length(temp$Time)-1+position)][seq(from=1, to=length(temp$Time), by=input$XInterval)])
       }
       return(gp)
     }
