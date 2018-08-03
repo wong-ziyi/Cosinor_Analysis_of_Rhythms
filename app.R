@@ -127,7 +127,7 @@ server<-function(input, output, session) {
           geom_point(aes(x=Time, y=value), ForScatter)+
           geom_line(aes(x=x, y=y, colour="red"), FitCurve)+
           theme_classic()+
-          theme(legend.position = "none")+
+          theme(legend.position = "none", text = element_text(size=26))+
           labs(x=xtitle, y=ytitle)+
           expand_limits(y = 0)+
           scale_x_continuous(breaks = c(temp$Time)[seq(from=1, to=length(temp$Time), by=input$XInterval)], labels=ticks[position:(length(temp$Time)-1+position)][seq(from=1, to=length(temp$Time), by=input$XInterval)])
@@ -137,7 +137,7 @@ server<-function(input, output, session) {
           geom_errorbar(aes(x=Time, ymax=Value+SD, ymin=Value-SD), temp)+
           geom_line(aes(x=x, y=y, colour="red"), FitCurve)+
           theme_classic()+
-          theme(legend.position = "none")+
+          theme(legend.position = "none", text = element_text(size=26))+
           labs(x=xtitle, y=ytitle)+
           expand_limits(y = 0)+
           scale_x_continuous(breaks = c(temp$Time)[seq(from=1, to=length(temp$Time), by=input$XInterval)], labels=ticks[position:(length(temp$Time)-1+position)][seq(from=1, to=length(temp$Time), by=input$XInterval)])
