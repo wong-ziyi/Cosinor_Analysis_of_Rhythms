@@ -1,6 +1,6 @@
 # Required Packages and Functions -----------------------------------------
 list.of.packages <- c("shiny", "magrittr","ggplot2", "fields", "data.table", "stringr", "ape", "DT", 
-                      "shinyjs", "cosinor2")
+                      "shinyjs", "cosinor2", "xlsx")
 new.packages <- list.of.packages[!(list.of.packages %in% 
                                      installed.packages()[,"Package"])]
 if(length(new.packages)) {
@@ -16,6 +16,7 @@ library(ape)
 library(DT)
 library(shinyjs)
 library(cosinor2)
+library(xlsx)
 source("functions.R")
 ###=== end of packages and functions loading ===###
 # Shiny UI part -----------------------------------------
@@ -46,8 +47,11 @@ ui<-fluidPage(
           numericInput('XInterval', 'X-axis Display Interval', 4),
           textInput('xtitle', 'Label of x-axis', "Time(h)"),
           textInput('ytitle', 'Label of y-axis', "Expression Level"),
-          withBusyIndicatorUI(
-            actionButton("OK", "OK", class="btn-primary")
+          splitLayout(
+            withBusyIndicatorUI(
+              actionButton("OK", "OK", class="btn-primary")
+            ),
+            downloadButton('Results.xlsx', 'Result Download')
           )
         )
       ),
@@ -123,7 +127,7 @@ server<-function(input, output, session) {
         rhythm.p<-res[4] # P-value for F statistics
         R2<-cor(ForScatter$value, ForScatter$test)^2 # Coefficient of Determination (GOF, goodness of fit) which be calculated from Perason's correlation coefficient
         P.value<-cor.test(ForScatter$value, ForScatter$test)$p.value # Significance for this Perason's correlation coefficient
-        res<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value, position, ticks) # Built output results
+        res<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value, position, ticks, fit_per_est, period) # Built output results
       } #UI effect: error indicator. end.
     }) #UI effect: busy indicator. end. 
     return(res)
@@ -170,6 +174,35 @@ server<-function(input, output, session) {
   output$CurveFun<-renderUI(HTML(paste0("Function of fitted curve: ", res()[5])))
   output$R2<-renderText(paste0("R squared (Goodness of fit): ", res()[8]))
   output$P.value<-renderText(paste0("P-value of fit: ", res()[9]))
+  output$Results.xlsx<-downloadHandler(
+    filename = function(){
+      paste("Results", "xlsx", sep = ".")
+    },
+    content = function(fname){
+      res.out<-data.frame(terms=c("MESOR:", 
+                                  "Amplitude:", 
+                                  "Period:", 
+                                  "Phase:", 
+                                  "F statistics:", 
+                                  "P-value for rhythm detection:", 
+                                  "Fitted Curve Function:", 
+                                  "R squared (Goodness of fit):", 
+                                  "P-value for fit"), 
+                          results=c(res()[12][[1]]$coefficients[1],
+                                    res()[12][[1]]$coefficients[2],
+                                    res()[13][[1]],
+                                    res()[12][[1]]$coefficients[3],
+                                    res()[6][[1]],
+                                    res()[7][[1]],
+                                    res()[5][[1]],
+                                    res()[8][[1]],
+                                    res()[9][[1]]
+                                    )
+                          )
+      Sys.sleep(2)
+      write.xlsx2(x=res.out, file = fname, sheetName = "CAOR_WZY", row.names = FALSE, append = FALSE)
+    }
+  )
   session$onSessionEnded(stopApp)
 }
 # Shiny app finishing function -----------------------------------------
