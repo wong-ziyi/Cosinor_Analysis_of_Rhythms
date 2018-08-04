@@ -18,6 +18,7 @@ library(shinyjs)
 library(cosinor2)
 source("functions.R")
 ###=== end of packages and functions loading ===###
+# Shiny UI part -----------------------------------------
 ui<-fluidPage(
   useShinyjs(),
   sidebarLayout(
@@ -45,7 +46,9 @@ ui<-fluidPage(
           numericInput('XInterval', 'X-axis Display Interval', 4),
           textInput('xtitle', 'Label of x-axis', "Time(h)"),
           textInput('ytitle', 'Label of y-axis', "Expression Level"),
-          actionButton("OK", "OK", class="btn-primary")
+          withBusyIndicatorUI(
+            actionButton("OK", "OK", class="btn-primary")
+          )
         )
       ),
       conditionalPanel(
@@ -74,6 +77,7 @@ ui<-fluidPage(
     )
   )
 )
+# Shiny server function -----------------------------------------
 server<-function(input, output, session) {
   res<-eventReactive(input$OK, {
     withBusyIndicatorServer("OK", {
@@ -168,4 +172,5 @@ server<-function(input, output, session) {
   output$P.value<-renderText(paste0("P-value of fit: ", res()[9]))
   session$onSessionEnded(stopApp)
 }
+# Shiny app finishing function -----------------------------------------
 shinyApp(ui=ui, server=server)

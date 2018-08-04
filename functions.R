@@ -44,6 +44,29 @@ popover <- function(title, content, header = NULL, html = TRUE, class = "btn-lin
     )
   )
 }
+# Need to use with the corresponding `withBusyIndicator` server function
+withBusyIndicatorUI <- function(button) {
+  id <- button[['attribs']][['id']]
+  div(
+    `data-for-btn` = id,
+    button,
+    span(
+      class = "btn-loading-container",
+      hidden(
+        img(src = "ajax-loader-bar.gif", class = "btn-loading-indicator"),
+        icon("check", class = "btn-done-indicator")
+      )
+    ),
+    hidden(
+      div(class = "btn-err",
+          div(icon("exclamation-circle"),
+              tags$b("Error: "),
+              span(class = "btn-err-msg")
+          )
+      )
+    )
+  )
+}
 # Call this function from the server with the button id that is clicked and the
 # expression to run when the button is clicked
 withBusyIndicatorServer <- function(buttonId, expr) {
