@@ -41,7 +41,7 @@ ui<-fluidPage(
           numericInput('TimeTagsCol', 'Cloumn number of time', 1),
           numericInput('ValueCols', 'Start cloumn number of sample', 2),
           numericInput('ValueCole', 'End Cloumn number of sample', 4),
-          numericInput('Interval', 'Interval of Data', 0.5),
+          numericInput('Interval', 'Interval of Data', 4),
           numericInput('XInterval', 'X-axis Display Interval', 4),
           textInput('xtitle', 'Label of x-axis', "Time(h)"),
           textInput('ytitle', 'Label of y-axis', "Expression Level"),
@@ -76,45 +76,59 @@ ui<-fluidPage(
 )
 server<-function(input, output, session) {
   res<-eventReactive(input$OK, {
-    raw<-read.csv(input$raw$datapath, header = TRUE, sep = ",")
-    #Parameters setting
-    TimeTagsCol<-input$TimeTagsCol
-    period<-input$period
-    xtitle<-input$xtitle
-    ytitle<-input$ytitle
-    if(input$Interval != 0){
-      TimeSeq<-seq(from=0, to=24, by=input$Interval)
-      TimeSeq<-TimeSeq[-length(TimeSeq)]
-    } else {
-      TimeSeq<-(0:23)
-    }
-    position<-match(raw[1, TimeTagsCol], TimeSeq)
-    ticks<-rep(TimeSeq, ceil(length(raw[, TimeTagsCol])/24))
-    ValueCol<-c(input$ValueCols:input$ValueCole)
-    period<-periodogram(data = raw, timecol = input$TimeTagsCol, firstsubj = input$ValueCols, lastsubj = input$ValueCole)
-    period<-period$plot_env$best
-    temp<-data.frame(Time=raw[, TimeTagsCol], Value=rowMeans(raw[, ValueCol]), SD=rowSds(as.matrix(raw[, ValueCol])))
-    fit_per_est<-cosinor.lm(Value~time(Time), period = period, data = temp)
-    FitCurve<-data.frame(x=temp$Time, y=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*temp$Time/period+pi-fit_per_est$coefficients[3]))
-    res<-cosinor.detect(fit_per_est)
-    ForScatter<-melt(raw, id.vars=TimeTagsCol)
-    ForScatter<-cbind(ForScatter, test=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*ForScatter$Time/period+pi-fit_per_est$coefficients[3]))
-    #Results Part
-    CurveFun<-paste0(round(fit_per_est$coefficients[1],2),
-                     " + ", round(fit_per_est$coefficients[2],2),
-                     "cos(2\u03C0t/", period, " + ", round(pi-fit_per_est$coefficients[3],2),
-                     ")")
-    F.statistic<-res[1]
-    rhythm.p<-res[4]
-    R2<-cor(ForScatter$value, ForScatter$test)^2
-    P.value<-cor.test(ForScatter$value, ForScatter$test)$p.value
-    res<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value, position, ticks)
+    withBusyIndicatorServer("OK", {
+      if (is.null(input$raw)) {
+        stop("Please submit your data first")
+        return(NULL)
+      } else {
+        raw<-read.csv(input$raw$datapath, header = TRUE, sep = ",")
+        #Parameters setting (Passed from UI input)
+        TimeTagsCol<-input$TimeTagsCol #Column number of the time series
+        ValueCol<-c(input$ValueCols:input$ValueCole) #Column number of the results
+        xtitle<-input$xtitle #Title of x-axis
+        ytitle<-input$ytitle #Title of y-axis
+        #Set up x-axis label of ticks
+        if(input$Interval != 0){
+          TimeSeq<-seq(from=0, to=24, by=input$Interval) # Make general time sequence 0-24
+          TimeSeq<-TimeSeq[-length(TimeSeq)] # Make general time sequence 0->24
+        } else {
+          TimeSeq<-(0:23) # If interval un defined, then make defaut general time sequence 0-23
+        }
+        position<-match(raw[1, TimeTagsCol], TimeSeq) # Identify the start position of time in upload data
+        ticks<-rep(TimeSeq, ceil(last(raw[, TimeTagsCol])/24)) # Make final sequence for labling the x-axis ticks
+        #Make temporal data that contains the calculated mean and standrad deviation
+        temp<-data.frame(Time=raw[, TimeTagsCol], Value=rowMeans(raw[, ValueCol]), SD=rowSds(as.matrix(raw[, ValueCol])))
+        #Estimate the period by modified iterative function from cosinor2
+        period<-periodogram_wzy(data = temp, timecol = 1, firstsubj = 2, lastsubj = 2)
+        period<-period$plot_env$best # Pass the best results
+        #Get best fitted cosinor model
+        fit_per_est<-cosinor.lm(Value~time(Time), period = period, data = temp)
+        #Calculate the estimated fitted value
+        FitCurve<-data.frame(x=seq(from=first(raw[, TimeTagsCol]), to=last(raw[, TimeTagsCol]), by=0.5), y=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*seq(from=first(raw[, TimeTagsCol]), to=last(raw[, TimeTagsCol]), by=0.5)/period+pi-fit_per_est$coefficients[3]))
+        #Statistically detect the rhythms
+        res<-cosinor.detect(fit_per_est)
+        #Make temporal for scatter plot
+        ForScatter<-melt(raw, id.vars=TimeTagsCol)
+        ForScatter<-cbind(ForScatter, test=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*ForScatter$Time/period+pi-fit_per_est$coefficients[3]))
+        #Results Part (combine all results and output)
+        CurveFun<-paste0(round(fit_per_est$coefficients[1],2),
+                         " + ", round(fit_per_est$coefficients[2],2),
+                         "cos(2\u03C0t/", period, " + ", round(pi-fit_per_est$coefficients[3],2),
+                         ")") # cosinor model
+        F.statistic<-res[1] # F statistics
+        rhythm.p<-res[4] # P-value for F statistics
+        R2<-cor(ForScatter$value, ForScatter$test)^2 # Coefficient of Determination (GOF, goodness of fit) which be calculated from Perason's correlation coefficient
+        P.value<-cor.test(ForScatter$value, ForScatter$test)$p.value # Significance for this Perason's correlation coefficient
+        res<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value, position, ticks) # Built output results
+      } #UI effect: error indicator. end.
+    }) #UI effect: busy indicator. end. 
     return(res)
   })
   plot.out<-reactive({
     if (is.null(res())){
       return(NULL)
     } else {
+      #Pass value to local
       position<-res()[10][[1]]
       ticks<-res()[11][[1]]
       ForScatter<-res()[4][[1]]
@@ -122,6 +136,7 @@ server<-function(input, output, session) {
       temp<-res()[2][[1]]
       xtitle<-input$xtitle
       ytitle<-input$ytitle
+      #Scatter or Mean SD?
       if (input$style == TRUE){
         gp <- ggplot()+
           geom_point(aes(x=Time, y=value), ForScatter)+
