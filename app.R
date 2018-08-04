@@ -85,7 +85,7 @@ ui<-fluidPage(
 server<-function(input, output, session) {
   res<-eventReactive(input$OK, {
     withBusyIndicatorServer("OK", {
-      if (is.null(input$raw)) {
+      if (is.null(input$raw$datapath)) {
         stop("Please submit your data first")
         return(NULL)
       } else {
@@ -103,7 +103,7 @@ server<-function(input, output, session) {
           TimeSeq<-(0:23) # If interval un defined, then make defaut general time sequence 0-23
         }
         position<-match(raw[1, TimeTagsCol], TimeSeq) # Identify the start position of time in upload data
-        ticks<-rep(TimeSeq, ceil(last(raw[, TimeTagsCol])/24)) # Make final sequence for labling the x-axis ticks
+        ticks<-rep(TimeSeq, ceil(last(raw[, TimeTagsCol])/24)+1) # Make final sequence for labling the x-axis ticks
         #Make temporal data that contains the calculated mean and standrad deviation
         temp<-data.frame(Time=raw[, TimeTagsCol], Value=rowMeans(raw[, ValueCol]), SD=rowSds(as.matrix(raw[, ValueCol])))
         #Estimate the period by modified iterative function from cosinor2
