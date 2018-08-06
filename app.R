@@ -97,8 +97,10 @@ server<-function(input, output, session) {
         ytitle<-input$ytitle #Title of y-axis
         #Set up x-axis label of ticks
         if(input$Interval != 0){
-          TimeSeq<-seq(from=0, to=24, by=input$Interval) # Make general time sequence 0-24
-          TimeSeq<-TimeSeq[-length(TimeSeq)] # Make general time sequence 0->24
+          TimeSeq<-seq(from=first(raw$Time), to=24, by=input$Interval) # Make general time sequence 0-24
+          if(last(TimeSeq)==24){
+            TimeSeq<-TimeSeq[-length(TimeSeq)]
+          } # Make general time sequence 0->24
         } else {
           TimeSeq<-(0:23) # If interval un defined, then make defaut general time sequence 0-23
         }
