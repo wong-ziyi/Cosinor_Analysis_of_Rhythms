@@ -16,7 +16,6 @@ library(ape)
 library(DT)
 library(shinyjs)
 library(cosinor2)
-library(xlsx)
 source("functions.R")
 ###=== end of packages and functions loading ===###
 # Shiny UI part -----------------------------------------
@@ -41,17 +40,17 @@ ui<-fluidPage(
           ),
           checkboxInput('style', 'Scatter plot'),
           numericInput('TimeTagsCol', 'Cloumn number of time', 1),
-          numericInput('ValueCols', 'Start cloumn number of sample', 2),
-          numericInput('ValueCole', 'End Cloumn number of sample', 4),
-          numericInput('Interval', 'Interval of Data', 4),
-          numericInput('XInterval', 'X-axis Display Interval', 4),
+          numericInput('ValueCols', 'Start cloumn number of sample', 2, min = 1, step = 1),
+          numericInput('ValueCole', 'End Cloumn number of sample', 4, min = 1, step = 1),
+          numericInput('Interval', 'Interval of Data', 4, min = 0),
+          numericInput('XInterval', 'X-axis Display Interval', 4, min=1),
           textInput('xtitle', 'Label of x-axis', "Time(h)"),
           textInput('ytitle', 'Label of y-axis', "Expression Level"),
           splitLayout(
             withBusyIndicatorUI(
               actionButton("OK", "OK", class="btn-primary")
             ),
-            downloadButton('Results.xlsx', 'Result Download')
+            downloadButton('Results.csv', 'Result Download')
           )
         )
       ),
@@ -107,7 +106,11 @@ server<-function(input, output, session) {
         position<-match(raw[1, TimeTagsCol], TimeSeq) # Identify the start position of time in upload data
         ticks<-rep(TimeSeq, ceil(last(raw[, TimeTagsCol])/24)+1) # Make final sequence for labling the x-axis ticks
         #Make temporal data that contains the calculated mean and standrad deviation
-        temp<-data.frame(Time=raw[, TimeTagsCol], Value=rowMeans(raw[, ValueCol]), SD=rowSds(as.matrix(raw[, ValueCol])))
+        if(input$ValueCols != input$ValueCole){
+          temp<-data.frame(Time=raw[, TimeTagsCol], Value=rowMeans(raw[, ValueCol]), SD=rowSds(as.matrix(raw[, ValueCol])))
+        } else if(input$ValueCols == input$ValueCole){
+          temp<-data.frame(Time=raw[, TimeTagsCol], Value=raw[, ValueCol], SD=0)
+        }
         #Estimate the period by modified iterative function from cosinor2
         period<-periodogram_wzy(data = temp, timecol = 1, firstsubj = 2, lastsubj = 2)
         period<-period$plot_env$best # Pass the best results
@@ -118,7 +121,7 @@ server<-function(input, output, session) {
         #Statistically detect the rhythms
         res<-cosinor.detect(fit_per_est)
         #Make temporal for scatter plot
-        ForScatter<-melt(raw, id.vars=TimeTagsCol)
+        ForScatter<-melt(raw[, c(TimeTagsCol, ValueCol)], id.vars=TimeTagsCol)
         ForScatter<-cbind(ForScatter, test=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*ForScatter$Time/period+pi-fit_per_est$coefficients[3]))
         #Results Part (combine all results and output)
         CurveFun<-paste0(round(fit_per_est$coefficients[1],2),
@@ -176,9 +179,9 @@ server<-function(input, output, session) {
   output$CurveFun<-renderUI(HTML(paste0("Function of fitted curve: ", res()[5])))
   output$R2<-renderText(paste0("R squared (Goodness of fit): ", res()[8]))
   output$P.value<-renderText(paste0("P-value of fit: ", res()[9]))
-  output$Results.xlsx<-downloadHandler(
+  output$Results.csv<-downloadHandler(
     filename = function(){
-      paste("Results", "xlsx", sep = ".")
+      paste("Results", "csv", sep = ".")
     },
     content = function(fname){
       res.out<-data.frame(terms=c("MESOR:", 
@@ -202,7 +205,7 @@ server<-function(input, output, session) {
                                     )
                           )
       Sys.sleep(2)
-      write.xlsx2(x=res.out, file = fname, sheetName = "CAOR_WZY", row.names = FALSE, append = FALSE)
+      write.csv(x=res.out, file = fname, sep = ",", row.names = FALSE)
     }
   )
   session$onSessionEnded(stopApp)
