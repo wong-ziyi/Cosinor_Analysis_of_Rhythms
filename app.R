@@ -1,6 +1,6 @@
 # Required Packages and Functions -----------------------------------------
 list.of.packages <- c("shiny", "magrittr","ggplot2", "fields", "data.table", "stringr", "ape", "DT", 
-                      "shinyjs", "cosinor2", "xlsx")
+                      "shinyjs", "cosinor2")
 new.packages <- list.of.packages[!(list.of.packages %in% 
                                      installed.packages()[,"Package"])]
 if(length(new.packages)) {
@@ -42,8 +42,7 @@ ui<-fluidPage(
           numericInput('TimeTagsCol', 'Cloumn number of time', 1),
           numericInput('ValueCols', 'Start cloumn number of sample', 2, min = 1, step = 1),
           numericInput('ValueCole', 'End Cloumn number of sample', 4, min = 1, step = 1),
-          numericInput('Interval', 'Interval of Data', 4, min = 0),
-          numericInput('XInterval', 'X-axis Display Interval', 4, min=1),
+          numericInput('XInterval', 'X-axis Display Interval', 1, min=1),
           textInput('xtitle', 'Label of x-axis', "Time(h)"),
           textInput('ytitle', 'Label of y-axis', "Expression Level"),
           splitLayout(
@@ -94,17 +93,19 @@ server<-function(input, output, session) {
         ValueCol<-c(input$ValueCols:input$ValueCole) #Column number of the results
         xtitle<-input$xtitle #Title of x-axis
         ytitle<-input$ytitle #Title of y-axis
-        #Set up x-axis label of ticks
-        if(input$Interval != 0){
-          TimeSeq<-seq(from=first(raw$Time), to=24, by=input$Interval) # Make general time sequence 0-24
-          if(last(TimeSeq)==24){
-            TimeSeq<-TimeSeq[-length(TimeSeq)]
-          } # Make general time sequence 0->24
-        } else {
-          TimeSeq<-(0:23) # If interval un defined, then make defaut general time sequence 0-23
+        #Set up x-axis label of ticks by iterative method
+        TimeSeq<-c()
+        TimeS<-raw[, TimeTagsCol]
+        for (i in 1:length(TimeS)) {
+          if(TimeS[i]<24){
+            TimeSeq0<-TimeS[i]
+          } else if (TimeS[i]>=24){
+            TimeSeq0<-TimeS[i]-24
+            TimeS<-TimeS-24
+          }
+          TimeSeq<-c(TimeSeq, TimeSeq0)
         }
-        position<-match(raw[1, TimeTagsCol], TimeSeq) # Identify the start position of time in upload data
-        ticks<-rep(TimeSeq, ceil(last(raw[, TimeTagsCol])/24)+1) # Make final sequence for labling the x-axis ticks
+        ticks<-TimeSeq # Make final sequence for labling the x-axis ticks
         #Make temporal data that contains the calculated mean and standrad deviation
         if(input$ValueCols != input$ValueCole){
           temp<-data.frame(Time=raw[, TimeTagsCol], Value=rowMeans(raw[, ValueCol]), SD=rowSds(as.matrix(raw[, ValueCol])))
@@ -132,7 +133,7 @@ server<-function(input, output, session) {
         rhythm.p<-res[4] # P-value for F statistics
         R2<-cor(ForScatter$value, ForScatter$test)^2 # Coefficient of Determination (GOF, goodness of fit) which be calculated from Perason's correlation coefficient
         P.value<-cor.test(ForScatter$value, ForScatter$test)$p.value # Significance for this Perason's correlation coefficient
-        res<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value, position, ticks, fit_per_est, period) # Built output results
+        res<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value, ticks, fit_per_est, period) # Built output results
       } #UI effect: error indicator. end.
     }) #UI effect: busy indicator. end. 
     return(res)
@@ -142,8 +143,7 @@ server<-function(input, output, session) {
       return(NULL)
     } else {
       #Pass value to local
-      position<-res()[10][[1]]
-      ticks<-res()[11][[1]]
+      ticks<-res()[10][[1]]
       ForScatter<-res()[4][[1]]
       FitCurve<-res()[3][[1]]
       temp<-res()[2][[1]]
@@ -158,7 +158,7 @@ server<-function(input, output, session) {
           theme(legend.position = "none", text = element_text(size=26))+
           labs(x=xtitle, y=ytitle)+
           expand_limits(y = 0)+
-          scale_x_continuous(breaks = c(temp$Time)[seq(from=1, to=length(temp$Time), by=input$XInterval)], labels=ticks[position:(length(temp$Time)-1+position)][seq(from=1, to=length(temp$Time), by=input$XInterval)])
+          scale_x_continuous(breaks = c(temp$Time)[seq(from=1, to=length(temp$Time), by=input$XInterval)], labels=ticks[seq(from=1, to=length(temp$Time), by=input$XInterval)])
       } else if (input$style == FALSE){
         gp <- ggplot()+
           geom_point(aes(x=Time, y=Value), temp)+
@@ -168,7 +168,7 @@ server<-function(input, output, session) {
           theme(legend.position = "none", text = element_text(size=26))+
           labs(x=xtitle, y=ytitle)+
           expand_limits(y = 0)+
-          scale_x_continuous(breaks = c(temp$Time)[seq(from=1, to=length(temp$Time), by=input$XInterval)], labels=ticks[position:(length(temp$Time)-1+position)][seq(from=1, to=length(temp$Time), by=input$XInterval)])
+          scale_x_continuous(breaks = c(temp$Time)[seq(from=1, to=length(temp$Time), by=input$XInterval)], labels=ticks[seq(from=1, to=length(temp$Time), by=input$XInterval)])
       }
       return(gp)
     }
@@ -193,10 +193,10 @@ server<-function(input, output, session) {
                                   "Fitted Curve Function:", 
                                   "R squared (Goodness of fit):", 
                                   "P-value for fit"), 
-                          results=c(res()[12][[1]]$coefficients[1],
-                                    res()[12][[1]]$coefficients[2],
-                                    res()[13][[1]],
-                                    res()[12][[1]]$coefficients[3],
+                          results=c(res()[11][[1]]$coefficients[1],
+                                    res()[11][[1]]$coefficients[2],
+                                    res()[12][[1]],
+                                    res()[11][[1]]$coefficients[3],
                                     res()[6][[1]],
                                     res()[7][[1]],
                                     res()[5][[1]],
