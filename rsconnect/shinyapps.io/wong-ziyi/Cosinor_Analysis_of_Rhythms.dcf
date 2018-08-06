@@ -5,9 +5,8 @@ account: wong-ziyi
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 393492
-bundleId: 1520224
+bundleId: 1520266
 url: https://wong-ziyi.shinyapps.io/Cosinor_Analysis_of_Rhythms/
-when: 1533542737.03357
+when: 1533544645.36897
 asMultiple: FALSE
 asStatic: FALSE
-ignoredFiles: .RData|README.md
