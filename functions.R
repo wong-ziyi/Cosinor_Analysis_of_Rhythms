@@ -1,6 +1,8 @@
 # Estimate period by iterative algorithm (modified from the fucntion, periodogram, in cosinor2 package)
 periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, na.action){
   periodogram<-matrix()
+  #convert hour to minutes
+  data[, timecol]<-data[, timecol]*60
   end<-ceiling(last(data[,timecol]))
   if (lastsubj - firstsubj == 0) {
     colnames(data)[timecol]<-"Time"

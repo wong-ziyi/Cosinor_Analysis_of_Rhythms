@@ -119,7 +119,10 @@ server<-function(input, output, session) {
         period<-periodogram_wzy(data = temp, timecol = 1, firstsubj = 2, lastsubj = 2)
         period<-period$plot_env$best # Pass the best results
         #Get best fitted cosinor model
-        fit_per_est<-cosinor.lm(Value~time(Time), period = period, data = temp)
+        temp0<-temp
+        temp0[,1]<-temp0[,1]*60 #convert hours to minutes
+        fit_per_est<-cosinor.lm(Value~time(Time), period = period, data = temp0)
+        period<-period/60 #convert minutes to hours
         #Calculate the estimated fitted value
         FitCurve<-data.frame(x=seq(from=first(raw[, TimeTagsCol]), to=last(raw[, TimeTagsCol]), by=0.5), y=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*seq(from=first(raw[, TimeTagsCol]), to=last(raw[, TimeTagsCol]), by=0.5)/period+pi-fit_per_est$coefficients[3]))
         #Statistically detect the rhythms
