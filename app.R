@@ -106,6 +106,9 @@ server<-function(input, output, session) {
           TimeSeq<-c(TimeSeq, TimeSeq0)
         }
         ticks<-TimeSeq # Make final sequence for labling the x-axis ticks
+        #++///////////////////////////////////////////////////////////////////////////++#
+        #++==In follow processing, only mean value was used to fit a cosine function==++#
+        #++///////////////////////////////////////////////////////////////////////////++#
         #Make temporal data that contains the calculated mean and standrad deviation
         if(input$ValueCols != input$ValueCole){
           temp<-data.frame(Time=raw[, TimeTagsCol], Value=rowMeans(raw[, ValueCol]), SD=rowSds(as.matrix(raw[, ValueCol])))

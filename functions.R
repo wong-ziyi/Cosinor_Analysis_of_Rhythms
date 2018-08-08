@@ -1,16 +1,17 @@
 # Estimate period by iterative algorithm (modified from the fucntion, periodogram, in cosinor2 package)
 periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, na.action){
   periodogram<-matrix()
+  end<-ceiling(last(data[,timecol]))
   if (lastsubj - firstsubj == 0) {
     colnames(data)[timecol]<-"Time"
     colnames(data)[firstsubj]<-"Subjy"
-    for (i in seq(from=3, to=100, by=0.5)) {
+    for (i in seq(from=3, to=end, by=1)) {
       cosinor<-cosinor.lm(Subjy~time(Time),data=data,na.action=na.action,period=i)
       periodogram[[i]]<-cosinor.PR(cosinor)[[2]]
     }
   }
   else {
-    for (i in seq(from=3, to=100, by=0.1)){
+    for (i in seq(from=3, to=end, by=1)){
       cosinor<-population.cosinor.lm(data = data, timecol = timecol, firstsubj = firstsubj, lastsubj = lastsubj, na.action = na.action, period = i)
       periodogram[[i]]<-cosinor.PR(cosinor)[[2]]
     }
