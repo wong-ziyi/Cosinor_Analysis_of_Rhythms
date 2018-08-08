@@ -126,6 +126,7 @@ server<-function(input, output, session) {
         res<-cosinor.detect(fit_per_est)
         #Make temporal for scatter plot
         ForScatter<-melt(raw[, c(TimeTagsCol, ValueCol)], id.vars=TimeTagsCol)
+        colnames(ForScatter)<-c("Time", "variable","value")
         ForScatter<-cbind(ForScatter, test=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*ForScatter$Time/period+pi-fit_per_est$coefficients[3]))
         #Results Part (combine all results and output)
         CurveFun<-paste0(round(fit_per_est$coefficients[1],2),
@@ -136,10 +137,10 @@ server<-function(input, output, session) {
         rhythm.p<-res[4] # P-value for F statistics
         R2<-cor(ForScatter$value, ForScatter$test)^2 # Coefficient of Determination (GOF, goodness of fit) which be calculated from Perason's correlation coefficient
         P.value<-cor.test(ForScatter$value, ForScatter$test)$p.value # Significance for this Perason's correlation coefficient
-        res<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value, ticks, fit_per_est, period) # Built output results
+        res.out<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value, ticks, fit_per_est, period) # Built output results
       } #UI effect: error indicator. end.
     }) #UI effect: busy indicator. end. 
-    return(res)
+    return(res.out)
   })
   plot.out<-reactive({
     if (is.null(res())){
