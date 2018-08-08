@@ -4,16 +4,17 @@ periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, na.action){
   #convert hour to minutes
   data[, timecol]<-data[, timecol]*60
   end<-ceiling(last(data[,timecol]))
+  start<-data[, timecol][3]-data[, timecol][1]
   if (lastsubj - firstsubj == 0) {
     colnames(data)[timecol]<-"Time"
     colnames(data)[firstsubj]<-"Subjy"
-    for (i in seq(from=3, to=end, by=1)) {
+    for (i in seq(from=start, to=end, by=1)) {
       cosinor<-cosinor.lm(Subjy~time(Time),data=data,na.action=na.action,period=i)
       periodogram[[i]]<-cosinor.PR(cosinor)[[2]]
     }
   }
   else {
-    for (i in seq(from=3, to=end, by=1)){
+    for (i in seq(from=start, to=end, by=1)){
       cosinor<-population.cosinor.lm(data = data, timecol = timecol, firstsubj = firstsubj, lastsubj = lastsubj, na.action = na.action, period = i)
       periodogram[[i]]<-cosinor.PR(cosinor)[[2]]
     }
