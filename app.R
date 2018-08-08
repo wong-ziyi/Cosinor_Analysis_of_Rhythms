@@ -132,9 +132,9 @@ server<-function(input, output, session) {
         colnames(ForScatter)<-c("Time", "variable","value")
         ForScatter<-cbind(ForScatter, test=fit_per_est$coefficients[1]+fit_per_est$coefficients[2]*cos(2*pi*ForScatter$Time/period+pi-fit_per_est$coefficients[3]))
         #Results Part (combine all results and output)
-        CurveFun<-paste0(round(fit_per_est$coefficients[1],2),
-                         " + ", round(fit_per_est$coefficients[2],2),
-                         "cos(2\u03C0t/", period, " + ", round(pi-fit_per_est$coefficients[3],2),
+        CurveFun<-paste0(format(round(fit_per_est$coefficients[1],3), nsmall=3),
+                         " + ", format(round(fit_per_est$coefficients[2],3), nsmall=3),
+                         "cos(2\u03C0t/", format(round(period, 3), nsmall=3), " + ", format(round(pi-fit_per_est$coefficients[3],3), nsmall=3),
                          ")") # cosinor model
         F.statistic<-res[1] # F statistics
         rhythm.p<-res[4] # P-value for F statistics
