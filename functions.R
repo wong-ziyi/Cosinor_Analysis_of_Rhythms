@@ -25,7 +25,7 @@ periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, na.action){
   plot<-ggplot(periodogram,aes(x=1:rows))+
     geom_point(aes(y=periodogram)) +
     geom_line(aes(y=periodogram)) +
-    labs(x = "Period", y = "Coefficient of determination")
+    labs(x = "Period (minute)", y = "Coefficient of determination")
   best<-(which(periods == max(periods,na.rm=T)))
   print(paste("The best fitting period is",best))
   return(plot)

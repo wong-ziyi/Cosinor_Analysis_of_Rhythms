@@ -69,7 +69,8 @@ ui<-fluidPage(
             textOutput("rhythm.p"),
             htmlOutput("CurveFun"),
             textOutput("R2"),
-            textOutput("P.value")
+            textOutput("P.value"),
+            plotOutput("plot.period")
           )
         ),
         tabPanel(
@@ -116,8 +117,8 @@ server<-function(input, output, session) {
           temp<-data.frame(Time=raw[, TimeTagsCol], Value=raw[, ValueCol], SD=0)
         }
         #Estimate the period by modified iterative function from cosinor2
-        period<-periodogram_wzy(data = temp, timecol = 1, firstsubj = 2, lastsubj = 2)
-        period<-period$plot_env$best # Pass the best results
+        period0<-periodogram_wzy(data = temp, timecol = 1, firstsubj = 2, lastsubj = 2)
+        period<-period0$plot_env$best # Pass the best results
         #Get best fitted cosinor model
         temp0<-temp
         temp0[,1]<-temp0[,1]*60 #convert hours to minutes
@@ -140,7 +141,7 @@ server<-function(input, output, session) {
         rhythm.p<-res[4] # P-value for F statistics
         R2<-cor(ForScatter$value, ForScatter$test)^2 # Coefficient of Determination (GOF, goodness of fit) which be calculated from Perason's correlation coefficient
         P.value<-cor.test(ForScatter$value, ForScatter$test)$p.value # Significance for this Perason's correlation coefficient
-        res.out<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value, ticks, fit_per_est, period) # Built output results
+        res.out<-list(raw, temp, FitCurve, ForScatter, CurveFun, F.statistic, rhythm.p, R2, P.value, ticks, fit_per_est, period, period0) # Built output results
       } #UI effect: error indicator. end.
     }) #UI effect: busy indicator. end. 
     return(res.out)
@@ -181,6 +182,7 @@ server<-function(input, output, session) {
     }
   })
   output$plot.out<-renderPlot(plot.out())
+  output$plot.period<-renderPlot(print(res()[13][[1]]))
   output$F.statistic<-renderText(paste0("F statitics: ", res()[6]))
   output$rhythm.p<-renderText(paste0("P-value for rhythms: ", res()[7]))
   output$CurveFun<-renderUI(HTML(paste0("Function of fitted curve: ", res()[5])))
