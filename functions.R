@@ -1,32 +1,107 @@
 # Estimate period by iterative algorithm (modified from the fucntion, periodogram, in cosinor2 package)
+rhythms_wzy<-function(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design){
+  if(design==1 & Cols!=Cole){
+    raw[,ValueCol]<-t(apply(raw[, ValueCol], 1, function(x)sort(x)))
+  }
+  #Set up x-axis label of ticks by iterative method
+  TimeSeq<-c()
+  TimeS<-raw[, TimeTagsCol]
+  for (i in 1:length(TimeS)) {
+    if(TimeS[i]<24){
+      TimeSeq0<-TimeS[i]
+    } else if (TimeS[i]>=24){
+      TimeSeq0<-TimeS[i]-24
+      TimeS<-TimeS-24
+    }
+    TimeSeq<-c(TimeSeq, TimeSeq0)
+  }
+  ticks<-TimeSeq # Make final sequence for labling the x-axis ticks
+  #Make temporal data that contains the calculated mean and standrad deviation
+  if(Cols != Cole){
+    temp<-data.frame(Time=raw[, TimeTagsCol], Value=rowMeans(raw[, ValueCol]), SD=rowSds(as.matrix(raw[, ValueCol])))
+  } else if(Cols == Cole){
+    temp<-data.frame(Time=raw[, TimeTagsCol], Value=raw[, ValueCol], SD=0)
+  }
+  #Estimate the period by modified iterative function from cosinor2
+  period0<-periodogram_wzy(data = raw, timecol = TimeTagsCol, firstsubj = Cols, lastsubj = Cole)
+  period<-period0$plot_env$best # Pass the best results
+  #Get best fitted cosinor model
+  if(Cols==Cole){
+    fit_per_est<-cosinor.lm(Value~time(Time), period = period, data = temp)
+    phase<-correct.acrophase(fit_per_est)
+  } else if(Cols!=Cole) {
+    fit_per_est<-population.cosinor.lm(data = raw, timecol = TimeTagsCol, firstsubj = Cols, lastsubj = Cole, na.action = "na.exclude", period = period)
+    phase<-0
+    for (j in 1:(Cole-Cols+1)) {
+      phase<-phase+correct.acrophase(fit_per_est[["single.cos"]][[j]])
+    }
+    phase<-phase/(Cole-Cols+1)
+  }
+  #Calculate the estimated fitted value
+  FitCurve<-data.frame(x=seq(from=first(raw[, TimeTagsCol]), to=last(raw[, TimeTagsCol]), by=0.5), y=as.numeric(fit_per_est$coefficients[1])+as.numeric(fit_per_est$coefficients[2])*cos(2*pi*seq(from=first(raw[, TimeTagsCol]), to=last(raw[, TimeTagsCol]), by=0.5)/period+phase))
+  #Statistically detect the rhythms
+  res<-cosinor.detect(fit_per_est)
+  #Make temporal for scatter plot
+  ForScatter<-melt(raw[, c(TimeTagsCol, ValueCol)], id.vars=TimeTagsCol)
+  colnames(ForScatter)<-c("Time", "variable","value")
+  ForScatter<-cbind(ForScatter, test=as.numeric(fit_per_est$coefficients[1])+as.numeric(fit_per_est$coefficients[2])*cos(2*pi*ForScatter$Time/period+phase))
+  #Results Part (combine all results and output)
+  CurveFun<-paste0(format(round(fit_per_est$coefficients[1],2), nsmall=2),
+                   " + ", format(round(fit_per_est$coefficients[2],2), nsmall=2),
+                   "cos(2\u03C0t/", format(round(period, 2), nsmall=2), with_plus(format(round(phase,2)), nsmall=2),
+                   ")") # cosinor model
+  F.statistic<-res[1] # F statistics
+  rhythm.p<-res[4] # P-value for F statistics
+  R2<-cor(ForScatter$value, ForScatter$test)^2 # Coefficient of Determination (GOF, goodness of fit) which be calculated from Perason's correlation coefficient
+  P.value<-cor.test(ForScatter$value, ForScatter$test)$p.value # Significance for this Perason's correlation coefficient
+  res.out<-list(raw,           #1
+                temp,          #2
+                FitCurve,      #3
+                ForScatter,    #4
+                CurveFun,      #5
+                F.statistic,   #6
+                rhythm.p,      #7
+                R2,            #8
+                P.value,       #9
+                ticks,         #10
+                fit_per_est,   #11
+                period,        #12
+                period0,       #13
+                phase          #14
+                ) # Built output results
+  return(res.out)
+}
 periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, na.action){
-  periodogram<-matrix()
+  periodogram<-c()
+  periods<-c()
   #convert hour to minutes
-  data[, timecol]<-data[, timecol]*60
   end<-ceiling(last(data[,timecol]))
   start<-data[, timecol][3]-data[, timecol][1]
   if (lastsubj - firstsubj == 0) {
     colnames(data)[timecol]<-"Time"
     colnames(data)[firstsubj]<-"Subjy"
-    for (i in seq(from=start, to=end, by=1)) {
-      cosinor<-cosinor.lm(Subjy~time(Time),data=data,na.action=na.action,period=i)
-      periodogram[[i]]<-cosinor.PR(cosinor)[[2]]
+    for (i in seq(from=start, to=end, by=0.01)) {
+      tryCatch({
+        cosinor<-cosinor.lm(Subjy~time(Time),data=data,na.action = "na.exclude",period=i)
+        periodogram<-c(periodogram, cosinor.PR(cosinor)[[2]])
+        periods<-c(periods,i)
+      }, error=function(e){})
+    }
+  } else {
+    for (i in seq(from=start, to=end, by=0.01)){
+      tryCatch({
+        cosinor<-population.cosinor.lm(data = data, timecol = timecol, firstsubj = firstsubj, lastsubj = lastsubj, na.action = "na.exclude", period = i)
+        periodogram<-c(periodogram, cosinor.PR(cosinor)[[2]])
+        periods<-c(periods,i)
+      }, error=function(e){})
     }
   }
-  else {
-    for (i in seq(from=start, to=end, by=1)){
-      cosinor<-population.cosinor.lm(data = data, timecol = timecol, firstsubj = firstsubj, lastsubj = lastsubj, na.action = na.action, period = i)
-      periodogram[[i]]<-cosinor.PR(cosinor)[[2]]
-    }
-  }
-  periods<-as.numeric(periodogram)
-  periodogram<-data.frame(periodogram)
-  rows<-(nrow(periodogram))
-  plot<-ggplot(periodogram,aes(x=1:rows))+
-    geom_point(aes(y=periodogram)) +
-    geom_line(aes(y=periodogram)) +
-    labs(x = "Period (minute)", y = "Coefficient of determination")
-  best<-(which(periods == max(periods,na.rm=T)))
+  df<-as.data.frame(cbind(period=periods, fit=periodogram))
+  plot<-ggplot(df,aes(x=period, y=fit))+
+    geom_point(aes(y=fit)) +
+    geom_line(aes(y=fit)) +
+    labs(x = "Period (hour)", y = "Coefficient of determination")
+  best<-(periods[which(periodogram == max(periodogram,na.rm=T))])
   print(paste("The best fitting period is",best))
   return(plot)
 }
@@ -104,4 +179,18 @@ errorFunc <- function(err, buttonId) {
   errMessage <- gsub("^ddpcr: (.*)", "\\1", err$message)
   shinyjs::html(html = errMessage, selector = errElMsg)
   shinyjs::show(selector = errEl, anim = TRUE, animType = "fade")
+}
+with_plus <- function(x, ...)
+{
+  if (x > 0)
+  {
+    sprintf(
+      fmt = "+ %s", 
+      format(x, ...)
+    )
+  }
+  else
+  {
+    x
+  }
 }
