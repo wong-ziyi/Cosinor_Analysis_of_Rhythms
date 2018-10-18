@@ -1,6 +1,6 @@
 # Required Packages and Functions -----------------------------------------
-list.of.packages <- c("shiny", "magrittr","ggplot2", "fields", "data.table", "stringr", "ape", "DT", 
-                      "shinyjs", "cosinor2")
+list.of.packages <- c("shiny", "magrittr","ggplot2", "fields", "data.table", "stringr", "ape", "htmlwidgets", "DT", "Hmisc",
+                      "shinyjs", "cosinor2", "spam", "matrixStats","gtable", "munsell")
 new.packages <- list.of.packages[!(list.of.packages %in% 
                                      installed.packages()[,"Package"])]
 if(length(new.packages)) {
@@ -8,13 +8,18 @@ if(length(new.packages)) {
 }
 library(shiny)
 library(magrittr)
-library(ggplot2)
+library(matrixStats)
+library(htmlwidgets)
 library(fields)
 library(data.table)
 library(stringr)
 library(ape)
 library(DT)
 library(shinyjs)
+library(Hmisc)
+library(gtable)
+library(munsell)
+library(ggplot2)
 library(cosinor2)
 source("functions.R")
 ###=== end of packages and functions loading ===###
@@ -28,6 +33,7 @@ ui<-fluidPage(
         h4("Cosinor Analysis of Rhythms"),
         verticalLayout(
           checkboxInput('compare', "Test two groups"),
+          checkboxInput('AutoPer', "Determantation of period automatically"),
           uiOutput("compare.in"),
           checkboxInput('style', 'Scatter plot'),
           splitLayout(
@@ -76,6 +82,9 @@ server<-function(input, output, session) {
         radioButtons("sample", "Experiment design:",
                      c("Repeat measurement" = "Rep",
                        "Independent/single measurement" = "Ind")),
+        if(input$AutoPer==FALSE){
+          numericInput('interation', 'Maximal interation for period', 24, min = 3, step = 1)
+        },
         numericInput('TimeTagsCol', 'Cloumn number of time', 1),
         numericInput('ValueCols', 'Start cloumn number of sample', 2, min = 1, step = 1),
         numericInput('ValueCole', 'End Cloumn number of sample', 4, min = 1, step = 1),
@@ -94,6 +103,9 @@ server<-function(input, output, session) {
           radioButtons("sample", "Experiment design:",
                        c("Repeat measurement" = "Rep",
                          "Independent/single measurement" = "Ind")),
+          if(input$AutoPer==FALSE){
+            numericInput('interation1', 'Maximal interation for period', 24, min = 3, step = 1)
+          },
           numericInput('TimeTagsCol', 'Cloumn number of time', 1),
           numericInput('ValueCols', 'Start cloumn number of sample', 2, min = 1, step = 1),
           numericInput('ValueCole', 'End Cloumn number of sample', 4, min = 1, step = 1),
@@ -110,6 +122,9 @@ server<-function(input, output, session) {
           radioButtons("sample2", "Experiment design:",
                        c("Repeat measurement" = "Rep",
                          "Independent/single measurement" = "Ind")),
+          if(input$AutoPer==FALSE){
+            numericInput('interation2', 'Maximal interation for period', 24, min = 3, step = 1)
+          },
           numericInput('TimeTagsCol2', 'Cloumn number of time', 1),
           numericInput('ValueCols2', 'Start cloumn number of sample', 2, min = 1, step = 1),
           numericInput('ValueCole2', 'End Cloumn number of sample', 4, min = 1, step = 1),
@@ -183,7 +198,11 @@ server<-function(input, output, session) {
           design<-switch(input$sample,
                          Rep=1,
                          Ind=2)
-          res.out<-rhythms_wzy(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design)
+          if(input$AutoPer==TRUE){
+            res.out<-rhythms_wzy(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA")
+          } else {
+            res.out<-rhythms_wzy(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation)
+          }
         } else if(input$compare==TRUE){
           ###Group1
           raw1<-read.csv(input$raw1$datapath, header = TRUE, sep = ",")
@@ -197,13 +216,18 @@ server<-function(input, output, session) {
           design<-switch(input$sample,
                          Rep=1,
                          Ind=2)
-          res1<-rhythms_wzy(raw1, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design)
+          if(input$AutoPer==FALSE){
+            res1<-rhythms_wzy(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA")
+          } else {
+            res1<-rhythms_wzy(raw1, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation1)
+          }
+          
           ME1<-c()
           Am1<-c()
           Pe1<-c()
           Ph1<-c()
           for (i in Cole:Cols) {
-            temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design)
+            temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation1)
             ME1<-c(ME1, temp[[11]][["coefficients"]][1])
             Am1<-c(Am1, temp[[11]][["coefficients"]][2])
             Pe1<-c(Pe1, temp[[12]][1])
@@ -227,13 +251,18 @@ server<-function(input, output, session) {
           design<-switch(input$sample2,
                          Rep=1,
                          Ind=2)
-          res2<-rhythms_wzy(raw2, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design)
+          if(input$AutoPer==FALSE){
+            res2<-rhythms_wzy(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA")
+          } else {
+            res2<-rhythms_wzy(raw2, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation2)
+          }
+          
           ME2<-c()
           Am2<-c()
           Pe2<-c()
           Ph2<-c()
           for (i in Cole:Cols) {
-            temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design)
+            temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation2)
             ME2<-c(ME2, temp[[11]][["coefficients"]][1])
             Am2<-c(Am2, temp[[11]][["coefficients"]][2])
             Pe2<-c(Pe2, temp[[12]][1])
@@ -297,8 +326,8 @@ server<-function(input, output, session) {
       #Scatter or Mean SD?
       if (input$style == TRUE){
         gp <- ggplot()+
-          geom_point(aes(x=Time, y=value), ForScatter)+
-          geom_line(aes(x=x, y=y, colour="red"), FitCurve)+
+          geom_point(aes(x=Time, y=value), size=2, shape=1, fill="white", color="black", ForScatter)+
+          geom_line(aes(x=x, y=y, colour="red"), size=1, FitCurve)+
           theme_classic()+
           theme(legend.position = "none", text = element_text(size=26))+
           labs(x=xtitle, y=ytitle)+
@@ -306,9 +335,9 @@ server<-function(input, output, session) {
           scale_x_continuous(breaks = c(temp$Time)[seq(from=1, to=length(temp$Time), by=intervalx)], labels=ticks[seq(from=1, to=length(temp$Time), by=intervalx)])
       } else if (input$style == FALSE){
         gp <- ggplot()+
-          geom_point(aes(x=Time, y=Value), temp)+
-          geom_errorbar(aes(x=Time, ymax=Value+SD, ymin=Value-SD), temp)+
-          geom_line(aes(x=x, y=y, colour="red"), FitCurve)+
+          geom_point(aes(x=Time, y=Value), shape=1, fill="white", color="black", size=1.5, temp)+
+          geom_errorbar(aes(x=Time, ymax=Value+SD, ymin=Value-SD), width=0.5, size=0.5, position = position_dodge(0.3), temp)+
+          geom_line(aes(x=x, y=y, colour="red"), size=1, FitCurve)+
           theme_classic()+
           theme(legend.position = "none", text = element_text(size=26))+
           labs(x=xtitle, y=ytitle)+
@@ -403,9 +432,9 @@ server<-function(input, output, session) {
   })
   output$F.statistic<-renderText({
     if(input$compare==FALSE){
-      paste0("F statitics: ", res()[6])
+      paste0("F statistics: ", res()[6])
     }else if(input$compare==TRUE){
-      paste0("F statitics: ", res()[1][[1]][[6]])
+      paste0("F statistics: ", res()[1][[1]][[6]])
     }
   })
   output$rhythm.p<-renderText({
@@ -446,9 +475,9 @@ server<-function(input, output, session) {
   })
   output$F.statistic2<-renderText({
     if(input$compare==FALSE){
-      paste0("F statitics: ", res()[6])
+      paste0("F statistics: ", res()[6])
     }else if(input$compare==TRUE){
-      paste0("F statitics: ", res()[2][[1]][[6]])
+      paste0("F statistics: ", res()[2][[1]][[6]])
     }
   })
   output$rhythm.p2<-renderText({
