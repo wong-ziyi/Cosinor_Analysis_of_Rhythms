@@ -1,5 +1,5 @@
 # Required Packages and Functions -----------------------------------------
-list.of.packages <- c("shiny", "magrittr","ggplot2", "fields", "data.table", "stringr", "ape", "htmlwidgets", "DT", "Hmisc",
+list.of.packages <- c("shiny", "BH","magrittr","ggplot2", "fields", "data.table", "stringr", "ape", "htmlwidgets", "DT", "Hmisc",
                       "shinyjs", "cosinor2", "spam", "matrixStats","gtable", "munsell")
 new.packages <- list.of.packages[!(list.of.packages %in% 
                                      installed.packages()[,"Package"])]
@@ -7,6 +7,7 @@ if(length(new.packages)) {
   install.packages(new.packages)
 }
 library(shiny)
+library(BH)
 library(magrittr)
 library(matrixStats)
 library(htmlwidgets)
