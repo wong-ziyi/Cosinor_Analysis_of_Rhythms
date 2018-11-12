@@ -101,18 +101,18 @@ server<-function(input, output, session) {
             label = "Upload your Group1 in .csv file:",
             accept = c('csv', 'comma-separated-values', '.csv')
           ),
-          radioButtons("sample", "Experiment design:",
+          radioButtons("sample1", "Experiment design:",
                        c("Repeat measurement" = "Rep",
                          "Independent/single measurement" = "Ind")),
           if(input$AutoPer==FALSE){
             numericInput('interation1', 'Maximal interation for period', 24, min = 3, step = 1)
           },
-          numericInput('TimeTagsCol', 'Cloumn number of time', 1),
-          numericInput('ValueCols', 'Start cloumn number of sample', 2, min = 1, step = 1),
-          numericInput('ValueCole', 'End Cloumn number of sample', 4, min = 1, step = 1),
-          numericInput('XInterval', 'X-axis Display Interval', 1, min=1),
-          textInput('xtitle', 'Label of x-axis', "Time(h)"),
-          textInput('ytitle', 'Label of y-axis', "Expression Level")
+          numericInput('TimeTagsCol1', 'Cloumn number of time', 1),
+          numericInput('ValueCols1', 'Start cloumn number of sample', 2, min = 1, step = 1),
+          numericInput('ValueCole1', 'End Cloumn number of sample', 4, min = 1, step = 1),
+          numericInput('XInterval1', 'X-axis Display Interval', 1, min=1),
+          textInput('xtitle1', 'Label of x-axis', "Time(h)"),
+          textInput('ytitle1', 'Label of y-axis', "Expression Level")
         ),
         verticalLayout(
           fileInput(
@@ -208,17 +208,17 @@ server<-function(input, output, session) {
           ###Group1
           raw1<-read.csv(input$raw1$datapath, header = TRUE, sep = ",")
           #Parameters setting (Passed from UI input)
-          TimeTagsCol<-input$TimeTagsCol #Column number of the time series
-          Cols<-input$ValueCols
-          Cole<-input$ValueCole
+          TimeTagsCol<-input$TimeTagsCol1 #Column number of the time series
+          Cols<-input$ValueCols1
+          Cole<-input$ValueCole1
           ValueCol<-c(Cols:Cole) #Column number of the results
-          xtitle<-input$xtitle #Title of x-axis
-          ytitle<-input$ytitle #Title of y-axis
-          design<-switch(input$sample,
+          xtitle<-input$xtitle1 #Title of x-axis
+          ytitle<-input$ytitle1 #Title of y-axis
+          design<-switch(input$sample1,
                          Rep=1,
                          Ind=2)
-          if(input$AutoPer==FALSE){
-            res1<-rhythms_wzy(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA")
+          if(input$AutoPer==TRUE){
+            res1<-rhythms_wzy(raw1, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA")
           } else {
             res1<-rhythms_wzy(raw1, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation1)
           }
@@ -228,7 +228,14 @@ server<-function(input, output, session) {
           Pe1<-c()
           Ph1<-c()
           for (i in Cole:Cols) {
-            temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation1)
+            if(input$AutoPer==TRUE){
+              temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = "NA")
+              if (temp[[12]][1]==ceiling(last(raw1[,TimeTagsCol]))*1.5) {
+                temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation1)
+              }
+            } else {
+              temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation1)
+            }
             ME1<-c(ME1, temp[[11]][["coefficients"]][1])
             Am1<-c(Am1, temp[[11]][["coefficients"]][2])
             Pe1<-c(Pe1, temp[[12]][1])
@@ -252,8 +259,11 @@ server<-function(input, output, session) {
           design<-switch(input$sample2,
                          Rep=1,
                          Ind=2)
-          if(input$AutoPer==FALSE){
-            res2<-rhythms_wzy(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA")
+          if(input$AutoPer==TRUE){
+            res2<-rhythms_wzy(raw2, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA")
+            if (temp[[12]][1]==ceiling(last(raw2[,TimeTagsCol]))*1.5) {
+              temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation1)
+            }
           } else {
             res2<-rhythms_wzy(raw2, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation2)
           }
@@ -263,7 +273,11 @@ server<-function(input, output, session) {
           Pe2<-c()
           Ph2<-c()
           for (i in Cole:Cols) {
-            temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation2)
+            if(input$AutoPer==TRUE){
+              temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = "NA")
+            } else {
+              temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation2)
+            }
             ME2<-c(ME2, temp[[11]][["coefficients"]][1])
             Am2<-c(Am2, temp[[11]][["coefficients"]][2])
             Pe2<-c(Pe2, temp[[12]][1])

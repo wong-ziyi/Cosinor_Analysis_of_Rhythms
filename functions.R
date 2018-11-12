@@ -4,7 +4,7 @@ periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, iteration="NA"){
   periods<-c()
   #convert hour to minutes
   if(iteration=="NA"){
-    end<-ceiling(last(data[,timecol]))
+    end<-ceiling(last(data[,timecol]))*1.5
   } else {
     end<-iteration
   }
