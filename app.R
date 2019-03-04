@@ -84,7 +84,7 @@ server<-function(input, output, session) {
                      c("Repeat measurement" = "Rep",
                        "Independent/single measurement" = "Ind")),
         if(input$AutoPer==FALSE){
-          numericInput('interation', 'Maximal interation for period', 24, min = 3, step = 1)
+          numericInput('interation', 'Maximal interation for period', 48, min = 3, step = 1)
         },
         numericInput('TimeTagsCol', 'Cloumn number of time', 1),
         numericInput('ValueCols', 'Start cloumn number of sample', 2, min = 1, step = 1),
@@ -105,7 +105,7 @@ server<-function(input, output, session) {
                        c("Repeat measurement" = "Rep",
                          "Independent/single measurement" = "Ind")),
           if(input$AutoPer==FALSE){
-            numericInput('interation1', 'Maximal interation for period', 24, min = 3, step = 1)
+            numericInput('interation1', 'Maximal interation for period', 48, min = 3, step = 1)
           },
           numericInput('TimeTagsCol1', 'Cloumn number of time', 1),
           numericInput('ValueCols1', 'Start cloumn number of sample', 2, min = 1, step = 1),
@@ -124,7 +124,7 @@ server<-function(input, output, session) {
                        c("Repeat measurement" = "Rep",
                          "Independent/single measurement" = "Ind")),
           if(input$AutoPer==FALSE){
-            numericInput('interation2', 'Maximal interation for period', 24, min = 3, step = 1)
+            numericInput('interation2', 'Maximal interation for period', 48, min = 3, step = 1)
           },
           numericInput('TimeTagsCol2', 'Cloumn number of time', 1),
           numericInput('ValueCols2', 'Start cloumn number of sample', 2, min = 1, step = 1),
@@ -164,6 +164,7 @@ server<-function(input, output, session) {
             textOutput("R2"),
             textOutput("P.value"),
             dataTableOutput("table.G1"),
+            dataTableOutput("table.CI.G1"),
             plotOutput("plot.period")
           ),
           verticalLayout(
@@ -175,6 +176,7 @@ server<-function(input, output, session) {
             textOutput("R22"),
             textOutput("P.value2"),
             dataTableOutput("table.G2"),
+            dataTableOutput("table.CI.G2"),
             plotOutput("plot.period2")
           )
         )
@@ -222,31 +224,32 @@ server<-function(input, output, session) {
           } else {
             res1<-rhythms_wzy(raw1, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation1)
           }
-          
-          ME1<-c()
-          Am1<-c()
-          Pe1<-c()
-          Ph1<-c()
-          for (i in Cole:Cols) {
-            if(input$AutoPer==TRUE){
-              temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = "NA")
-              if (temp[[12]][1]==ceiling(last(raw1[,TimeTagsCol]))*1.5) {
+          if(Cols!=Cole){
+            ME1<-c()
+            Am1<-c()
+            Pe1<-c()
+            Ph1<-c()
+            for (i in Cole:Cols) {
+              if(input$AutoPer==TRUE){
+                temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = "NA")
+                if (temp[[12]][1]==ceiling(last(raw1[,TimeTagsCol]))*1.5) {
+                  temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation1)
+                }
+              } else {
                 temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation1)
               }
-            } else {
-              temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation1)
+              ME1<-c(ME1, temp[[11]][["coefficients"]][1])
+              Am1<-c(Am1, temp[[11]][["coefficients"]][2])
+              Pe1<-c(Pe1, temp[[12]][1])
+              Ph1<-c(Ph1, temp[[14]][1])
             }
-            ME1<-c(ME1, temp[[11]][["coefficients"]][1])
-            Am1<-c(Am1, temp[[11]][["coefficients"]][2])
-            Pe1<-c(Pe1, temp[[12]][1])
-            Ph1<-c(Ph1, temp[[14]][1])
+            G1<-data.frame(
+              "MESOR"=ME1,
+              "Amplitude"=Am1,
+              "Period"=Pe1,
+              "Phase"=Ph1
+            )
           }
-          G1<-data.frame(
-            "MESOR"=ME1,
-            "Amplitude"=Am1,
-            "Period"=Pe1,
-            "Phase"=Ph1
-          )
           ###Group2
           raw2<-read.csv(input$raw2$datapath, header = TRUE, sep = ",")
           #Parameters setting (Passed from UI input)
@@ -261,44 +264,55 @@ server<-function(input, output, session) {
                          Ind=2)
           if(input$AutoPer==TRUE){
             res2<-rhythms_wzy(raw2, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA")
-            if (temp[[12]][1]==ceiling(last(raw2[,TimeTagsCol]))*1.5) {
-              temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation1)
-            }
           } else {
             res2<-rhythms_wzy(raw2, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation2)
           }
-          
-          ME2<-c()
-          Am2<-c()
-          Pe2<-c()
-          Ph2<-c()
-          for (i in Cole:Cols) {
-            if(input$AutoPer==TRUE){
-              temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = "NA")
-            } else {
-              temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation2)
+          if(Cols!=Cole){
+            ME2<-c()
+            Am2<-c()
+            Pe2<-c()
+            Ph2<-c()
+            for (i in Cole:Cols) {
+              if(input$AutoPer==TRUE){
+                temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = "NA")
+              } else {
+                temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation2)
+              }
+              ME2<-c(ME2, temp[[11]][["coefficients"]][1])
+              Am2<-c(Am2, temp[[11]][["coefficients"]][2])
+              Pe2<-c(Pe2, temp[[12]][1])
+              Ph2<-c(Ph2, temp[[14]][1])
             }
-            ME2<-c(ME2, temp[[11]][["coefficients"]][1])
-            Am2<-c(Am2, temp[[11]][["coefficients"]][2])
-            Pe2<-c(Pe2, temp[[12]][1])
-            Ph2<-c(Ph2, temp[[14]][1])
+            G2<-data.frame(
+              "MESOR"=ME2,
+              "Amplitude"=Am2,
+              "Period"=Pe2,
+              "Phase"=Ph2
+            )
+            ME<-t.test(ME1, ME2)
+            Am<-t.test(Am1, Am2)
+            if(sum(Pe1-Pe2)!=0){
+              Pe<-t.test(Pe1, Pe2)
+            } else {
+              Pe<-list()
+              Pe$statistic<-0
+              Pe$p.value<-0
+            }
+            Ph<-t.test(Ph1, Ph2)
+            Student.t<-rbind("MESOR"=c(ME$statistic, ME$p.value),
+                             "Amplitude"=c(Am$statistic, Am$p.value),
+                             "Period"=c(Pe$statistic, Pe$p.value),
+                             "Phase"=c(Ph$statistic, Ph$p.value))
+            colnames(Student.t)<-c("t", "p-value")
+            Student.t<-as.data.frame(Student.t)
+          } else {
+            Student.t<-rbind("MESOR"=c("null", "null"),
+                             "Amplitude"=c("null", "null"),
+                             "Period"=c("null", "null"),
+                             "Phase"=c("null", "null"))
+            colnames(Student.t)<-c("t", "p-value")
+            Student.t<-as.data.frame(Student.t)
           }
-          G2<-data.frame(
-            "MESOR"=ME2,
-            "Amplitude"=Am2,
-            "Period"=Pe2,
-            "Phase"=Ph2
-          )
-          ME<-t.test(ME1, ME2)
-          Am<-t.test(Am1, Am2)
-          Pe<-t.test(Pe1, Pe2)
-          Ph<-t.test(Ph1, Ph2)
-          Student.t<-rbind("MESOR"=c(ME$statistic, ME$p.value),
-                           "Amplitude"=c(Am$statistic, Am$p.value),
-                           "Period"=c(Pe$statistic, Pe$p.value),
-                           "Phase"=c(Ph$statistic, Ph$p.value))
-          colnames(Student.t)<-c("t", "p-value")
-          Student.t<-as.data.frame(Student.t)
           res0<-cosinor.poptests(res1[11][[1]], res2[11][[1]])
           res0[3,5]<-res1[[14]][1]
           res0[3,6]<-res2[[14]][1]
@@ -480,6 +494,8 @@ server<-function(input, output, session) {
       paste0("P-value of fit: ", res()[1][[1]][[9]])
     }
   })
+  output$table.G1<-renderDataTable(res()[[4]])
+  output$table.CI.G1<-renderDataTable(as.data.frame(res()[[1]][[11]]$conf.ints))
   ###Group2 output
   output$plot.period2<-renderPlot({
     if(input$compare==FALSE){
@@ -523,8 +539,8 @@ server<-function(input, output, session) {
       paste0("P-value of fit: ", res()[2][[1]][[9]])
     }
   })
+  output$table.CI.G2<-renderDataTable(as.data.frame(res()[[2]][[11]]$conf.ints))
   output$table<-renderDataTable(as.data.frame(res()[[3]]))
-  output$table.G1<-renderDataTable(res()[[4]])
   output$table.G2<-renderDataTable(res()[[5]])
   output$table.t<-renderDataTable(res()[[6]])
   output$Results.csv<-downloadHandler(
