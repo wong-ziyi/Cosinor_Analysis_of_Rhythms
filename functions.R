@@ -1,44 +1,51 @@
 # Estimate period by iterative algorithm (modified from the fucntion, periodogram, in cosinor2 package)
-periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, iteration="NA"){
+periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, iteration="NA", PFix = "NA"){
   periodogram<-c()
   periods<-c()
   #convert hour to minutes
-  if(iteration=="NA"){
-    end<-ceiling(last(data[,timecol]))*1.5
-  } else {
+  if(iteration!="NA"){
     end<-iteration
-  }
-  start<-c(as.matrix(data[, timecol]))[4]-c(as.matrix(data[, timecol]))[1]
-  if (lastsubj - firstsubj == 0) {
-    colnames(data)[timecol]<-"Time"
-    colnames(data)[firstsubj]<-"Subjy"
-    for (i in seq(from=start, to=end, by=0.01)) {
-      tryCatch({
-        cosinor<-cosinor.lm(Subjy~time(Time),data=data,period=i)
-        periodogram<-c(periodogram, cosinor.PR(cosinor)[[2]])
-        periods<-c(periods,i)
-      }, error=function(e){})
+    start<-c(as.matrix(data[, timecol]))[4]-c(as.matrix(data[, timecol]))[1]
+    if (lastsubj - firstsubj == 0) {
+      colnames(data)[timecol]<-"Time"
+      colnames(data)[firstsubj]<-"Subjy"
+      for (i in seq(from=start, to=end, by=0.01)) {
+        tryCatch({
+          cosinor<-cosinor.lm(Subjy~time(Time),data=data,period=i)
+          periodogram<-c(periodogram, cosinor.PR(cosinor)[[2]])
+          periods<-c(periods,i)
+        }, error=function(e){})
+      }
+    } else {
+      for (i in seq(from=start, to=end, by=0.01)){
+        tryCatch({
+          TempData<-data[, c(timecol, firstsubj:lastsubj)]
+          cosinor<-population.cosinor.lm(data = t(TempData[,c(firstsubj:lastsubj)]), time = TempData[,timecol], period = i, plot = FALSE)
+          periodogram<-c(periodogram, cosinor.PR(cosinor)[[2]])
+          periods<-c(periods,i)
+        }, error=function(e){})
+      }
     }
-  } else {
-    for (i in seq(from=start, to=end, by=0.01)){
-      tryCatch({
-        TempData<-data[, c(timecol, firstsubj:lastsubj)]
-        cosinor<-population.cosinor.lm(data = t(TempData[,c(firstsubj:lastsubj)]), time = TempData[,timecol], period = i, plot = FALSE)
-        periodogram<-c(periodogram, cosinor.PR(cosinor)[[2]])
-        periods<-c(periods,i)
-      }, error=function(e){})
-    }
+    df<-as.data.frame(cbind(period=periods, fit=periodogram))
+    plot<-ggplot(df,aes(x=period, y=fit))+
+      geom_point(aes(y=fit)) +
+      geom_line(aes(y=fit)) +
+      labs(x = "Period (hour)", y = "Coefficient of determination")
+    best<-(periods[which(periodogram == max(periodogram,na.rm=T))])
+    print(paste("The best fitting period is",best))
+    return(plot)
+  } else if(PFix!="NA"){
+    df<-as.data.frame(cbind(period=c(1:12), fit=rep(0,12)))
+    plot<-ggplot(df,aes(x=period, y=fit))+
+      geom_point(aes(y=fit)) +
+      geom_line(aes(y=fit)) +
+      labs(x = "Period (hour)", y = "Coefficient of determination")
+    best<-PFix
+    print(paste("The best fitting period is",best))
+    return(plot)
   }
-  df<-as.data.frame(cbind(period=periods, fit=periodogram))
-  plot<-ggplot(df,aes(x=period, y=fit))+
-    geom_point(aes(y=fit)) +
-    geom_line(aes(y=fit)) +
-    labs(x = "Period (hour)", y = "Coefficient of determination")
-  best<-(periods[which(periodogram == max(periodogram,na.rm=T))])
-  print(paste("The best fitting period is",best))
-  return(plot)
 }
-rhythms_wzy<-function(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA"){
+rhythms_wzy<-function(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA", PFix = "NA"){
   if(design==1 & Cols!=Cole){
     raw[,ValueCol]<-t(apply(raw[, ValueCol], 1, function(x)sort(x)))
   }
@@ -62,7 +69,7 @@ rhythms_wzy<-function(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, de
     temp<-data.frame(Time=raw[, TimeTagsCol], Value=raw[, ValueCol], SD=0)
   }
   #Estimate the period by modified iterative function from cosinor2
-  period0<-periodogram_wzy(data = raw, timecol = TimeTagsCol, firstsubj = Cols, lastsubj = Cole, iteration = iteration)
+  period0<-periodogram_wzy(data = raw, timecol = TimeTagsCol, firstsubj = Cols, lastsubj = Cole, iteration = iteration, PFix = PFix)
   period<-period0$plot_env$best # Pass the best results
   #Get best fitted cosinor model
   if(Cols==Cole){

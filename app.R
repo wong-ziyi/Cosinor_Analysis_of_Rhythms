@@ -34,7 +34,9 @@ ui<-fluidPage(
         h4("Cosinor Analysis of Rhythms"),
         verticalLayout(
           checkboxInput('compare', "Test two groups"),
-          checkboxInput('AutoPer', "Determantation of period automatically"),
+          radioButtons("PeriodSet", "Period setting:",
+                       c("Set the maximal interation" = "AutoPer",
+                         "A fixed value" = "PFix")),
           uiOutput("compare.in"),
           checkboxInput('style', 'Scatter plot'),
           splitLayout(
@@ -83,8 +85,10 @@ server<-function(input, output, session) {
         radioButtons("sample", "Experiment design:",
                      c("Repeat measurement" = "Rep",
                        "Independent/single measurement" = "Ind")),
-        if(input$AutoPer==FALSE){
+        if(input$PeriodSet=="AutoPer"){
           numericInput('interation', 'Maximal interation for period', 48, min = 3, step = 1)
+        }else if(input$PeriodSet=="PFix"){
+          numericInput('PeriodFix', 'Fixed Period', 24, min = 3, step = 1)
         },
         numericInput('TimeTagsCol', 'Cloumn number of time', 1),
         numericInput('ValueCols', 'Start cloumn number of sample', 2, min = 1, step = 1),
@@ -104,8 +108,10 @@ server<-function(input, output, session) {
           radioButtons("sample1", "Experiment design:",
                        c("Repeat measurement" = "Rep",
                          "Independent/single measurement" = "Ind")),
-          if(input$AutoPer==FALSE){
+          if(input$PeriodSet=="AutoPer"){
             numericInput('interation1', 'Maximal interation for period', 48, min = 3, step = 1)
+          }else if(input$PeriodSet=="PFix"){
+            numericInput('PeriodFix1', 'Fixed Period', 24, min = 3, step = 1)
           },
           numericInput('TimeTagsCol1', 'Cloumn number of time', 1),
           numericInput('ValueCols1', 'Start cloumn number of sample', 2, min = 1, step = 1),
@@ -123,8 +129,10 @@ server<-function(input, output, session) {
           radioButtons("sample2", "Experiment design:",
                        c("Repeat measurement" = "Rep",
                          "Independent/single measurement" = "Ind")),
-          if(input$AutoPer==FALSE){
+          if(input$PeriodSet=="AutoPer"){
             numericInput('interation2', 'Maximal interation for period', 48, min = 3, step = 1)
+          }else if(input$PeriodSet=="PFix"){
+            numericInput('PeriodFix2', 'Fixed Period', 24, min = 3, step = 1)
           },
           numericInput('TimeTagsCol2', 'Cloumn number of time', 1),
           numericInput('ValueCols2', 'Start cloumn number of sample', 2, min = 1, step = 1),
@@ -201,10 +209,10 @@ server<-function(input, output, session) {
           design<-switch(input$sample,
                          Rep=1,
                          Ind=2)
-          if(input$AutoPer==TRUE){
-            res.out<-rhythms_wzy(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA")
-          } else {
-            res.out<-rhythms_wzy(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation)
+          if(input$PeriodSet=="PFix"){
+            res.out<-rhythms_wzy(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA", PFix = input$PeriodFix)
+          } else if(input$PeriodSet=="AutoPer"){
+            res.out<-rhythms_wzy(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation, PFix = "NA")
           }
         } else if(input$compare==TRUE){
           ###Group1
@@ -219,10 +227,10 @@ server<-function(input, output, session) {
           design<-switch(input$sample1,
                          Rep=1,
                          Ind=2)
-          if(input$AutoPer==TRUE){
-            res1<-rhythms_wzy(raw1, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA")
-          } else {
-            res1<-rhythms_wzy(raw1, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation1)
+          if(input$PeriodSet=="PFix"){
+            res1<-rhythms_wzy(raw1, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA", PFix = input$PeriodFix1)
+          } else if(input$PeriodSet=="AutoPer"){
+            res1<-rhythms_wzy(raw1, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation1, PFix = "NA")
           }
           if(Cols!=Cole){
             ME1<-c()
@@ -230,13 +238,10 @@ server<-function(input, output, session) {
             Pe1<-c()
             Ph1<-c()
             for (i in Cole:Cols) {
-              if(input$AutoPer==TRUE){
-                temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = "NA")
-                if (temp[[12]][1]==ceiling(last(raw1[,TimeTagsCol]))*1.5) {
-                  temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation1)
-                }
-              } else {
+              if(input$PeriodSet=="AutoPer"){
                 temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation1)
+              } else if(input$PeriodSet=="PFix"){
+                temp<-rhythms_wzy(raw1, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$PeriodFix1)
               }
               ME1<-c(ME1, temp[[11]][["coefficients"]][1])
               Am1<-c(Am1, temp[[11]][["coefficients"]][2])
@@ -262,10 +267,10 @@ server<-function(input, output, session) {
           design<-switch(input$sample2,
                          Rep=1,
                          Ind=2)
-          if(input$AutoPer==TRUE){
-            res2<-rhythms_wzy(raw2, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA")
-          } else {
-            res2<-rhythms_wzy(raw2, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation2)
+          if(input$PeriodSet=="PFix"){
+            res2<-rhythms_wzy(raw2, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = "NA", PFix = input$PeriodFix2)
+          } else if(input$PeriodSet=="AutoPer"){
+            res2<-rhythms_wzy(raw2, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, design, iteration = input$interation2, PFix = "NA")
           }
           if(Cols!=Cole){
             ME2<-c()
@@ -273,10 +278,10 @@ server<-function(input, output, session) {
             Pe2<-c()
             Ph2<-c()
             for (i in Cole:Cols) {
-              if(input$AutoPer==TRUE){
-                temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = "NA")
-              } else {
+              if(input$PeriodSet=="AutoPer"){
                 temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$interation2)
+              } else if(input$PeriodSet=="PFix"){
+                temp<-rhythms_wzy(raw2, TimeTagsCol, i, i, i, xtitle, ytitle, design, iteration = input$PeriodFix2)
               }
               ME2<-c(ME2, temp[[11]][["coefficients"]][1])
               Am2<-c(Am2, temp[[11]][["coefficients"]][2])
@@ -323,6 +328,22 @@ server<-function(input, output, session) {
                         G1, 
                         G2, 
                         Student.t)
+          res.out[[1]][[11]]$conf.ints<-rbind(
+            res.out[[1]][[11]]$conf.ints,
+            variance=c(
+              abs(res.out[[1]][[11]]$conf.ints[1,1]-res.out[[1]][[11]]$conf.ints[2,1])/2,
+              abs(res.out[[1]][[11]]$conf.ints[1,2]-res.out[[1]][[11]]$conf.ints[2,2])/2,
+              abs(res.out[[1]][[11]]$conf.ints[1,3]-res.out[[1]][[11]]$conf.ints[2,3])/2
+            )
+          )
+          res.out[[2]][[11]]$conf.ints<-rbind(
+            res.out[[2]][[11]]$conf.ints,
+            variance=c(
+              abs(res.out[[2]][[11]]$conf.ints[1,1]-res.out[[2]][[11]]$conf.ints[2,1])/2,
+              abs(res.out[[2]][[11]]$conf.ints[1,2]-res.out[[2]][[11]]$conf.ints[2,2])/2,
+              abs(res.out[[2]][[11]]$conf.ints[1,3]-res.out[[2]][[11]]$conf.ints[2,3])/2
+            )
+          )
         }
       } #UI effect: error indicator. end.
     }) #UI effect: busy indicator. end. 
