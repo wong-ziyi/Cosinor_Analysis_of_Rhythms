@@ -193,6 +193,7 @@ server<-function(input, output, session) {
   })
   res<-eventReactive(input$OK, {
     withBusyIndicatorServer("OK", {
+      browser()
       if (is.null(input$raw$datapath) & (is.null(input$raw1$datapath)|is.null(input$raw2$datapath))) {
         stop("Please submit your data first")
         return(NULL)
@@ -475,9 +476,9 @@ server<-function(input, output, session) {
   ###Group1 output
   output$plot.period<-renderPlot({
     if(input$compare==FALSE){
-      print(res()[13][[1]])
+      # print(res()[13][[1]])
     }else if(input$compare==TRUE){
-      print(res()[1][[1]][[13]])
+      # print(res()[1][[1]][[13]])
     }
   })
   output$F.statistic<-renderText({
@@ -520,9 +521,9 @@ server<-function(input, output, session) {
   ###Group2 output
   output$plot.period2<-renderPlot({
     if(input$compare==FALSE){
-      print(res()[13][[1]])
+      # print(res()[13][[1]])
     }else if(input$compare==TRUE){
-      print(res()[2][[1]][[13]])
+      # print(res()[2][[1]][[13]])
     }
   })
   output$F.statistic2<-renderText({
