@@ -6,7 +6,7 @@ periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, iteration="NA", PF
   if(iteration!="NA"){
     end<-iteration
     start<-c(as.matrix(data[, timecol]))[4]-c(as.matrix(data[, timecol]))[1]
-    if (lastsubj - firstsubj == 0) {
+    if ((lastsubj - firstsubj) == 0) {
       colnames(data)[timecol]<-"Time"
       colnames(data)[firstsubj]<-"Subjy"
       for (i in seq(from=start, to=end, by=0.01)) {
@@ -20,7 +20,9 @@ periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, iteration="NA", PF
       for (i in seq(from=start, to=end, by=0.01)){
         tryCatch({
           TempData<-data[, c(timecol, firstsubj:lastsubj)]
-          cosinor<-population.cosinor.lm(data = t(TempData[,c(firstsubj:lastsubj)]), time = TempData[,timecol], period = i, plot = FALSE)
+          cosinor<-population.cosinor.lm(
+            data = t(TempData[,c(firstsubj:lastsubj)]), time = TempData[,timecol], period = i, plot = FALSE
+          )
           periodogram<-c(periodogram, cosinor.PR(cosinor)[[2]])
           periods<-c(periods,i)
         }, error=function(e){})
@@ -32,7 +34,7 @@ periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, iteration="NA", PF
       geom_line(aes(y=fit)) +
       labs(x = "Period (hour)", y = "Coefficient of determination")
     best<-(periods[which(periodogram == max(periodogram,na.rm=T))])
-    print(paste("The best fitting period is",best))
+    # print(paste("The best fitting period is",best))
     return(plot)
   } else if(PFix!="NA"){
     df<-as.data.frame(cbind(period=c(1:12), fit=rep(0,12)))
@@ -41,7 +43,7 @@ periodogram_wzy<-function(data, timecol, firstsubj, lastsubj, iteration="NA", PF
       geom_line(aes(y=fit)) +
       labs(x = "Period (hour)", y = "Coefficient of determination")
     best<-PFix
-    print(paste("The best fitting period is",best))
+    # print(paste("The best fitting period is",best))
     return(plot)
   }
 }
@@ -89,7 +91,7 @@ rhythms_wzy<-function(raw, TimeTagsCol, Cols, Cole, ValueCol, xtitle, ytitle, de
   #Statistically detect the rhythms
   res<-cosinor.detect(fit_per_est)
   #Make temporal for scatter plot
-  ForScatter<-melt(raw[, c(TimeTagsCol, ValueCol)], id.vars=TimeTagsCol)
+  ForScatter<-reshape2::melt(raw[, c(TimeTagsCol, ValueCol)], id.vars=TimeTagsCol)
   colnames(ForScatter)<-c("Time", "variable","value")
   ForScatter<-cbind(ForScatter, test=as.numeric(fit_per_est$coefficients[1])+as.numeric(fit_per_est$coefficients[2])*cos(2*pi*ForScatter$Time/period+phase))
   #Results Part (combine all results and output)
